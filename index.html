@@ -1,0 +1,44 @@
+<script>
+  const input = document.getElementById('input');
+  const messages = document.getElementById('messages');
+
+  input.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+      const userMsg = input.value;
+      appendMessage('user', userMsg);
+      input.value = '';
+
+      // Chamada segura à API /api/chat (usa OpenAI com chave protegida)
+      const gptResponse = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userInput: userMsg })
+      });
+
+      const gptData = await gptResponse.json();
+      try {
+        const { cidade, estado, orcamento } = JSON.parse(gptData.result);
+
+        // Chamada à sua API do Render com os dados extraídos
+        const listaResponse = await fetch("https://lista-compras-vtxx.onrender.com/gerar-lista", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cidade, estado, orcamento })
+        });
+
+        const lista = await listaResponse.json();
+        const produtos = lista.lista.map(p => `- ${p.produto}: R$${p.preco.toFixed(2)}`).join('<br>');
+        appendMessage('bot', `Aqui está sua lista de compras:<br>${produtos}<br><br>Total: R$${lista.total.toFixed(2)}`);
+      } catch (err) {
+        appendMessage('bot', `Desculpe, não entendi. Pode repetir com cidade, estado e orçamento?`);
+      }
+    }
+  });
+
+  function appendMessage(sender, text) {
+    const msg = document.createElement('div');
+    msg.className = `msg ${sender}`;
+    msg.innerHTML = `<div class="${sender}">${text}</div>`;
+    messages.appendChild(msg);
+  }
+</script>
