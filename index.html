@@ -1,44 +1,80 @@
-<script>
-  const input = document.getElementById('input');
-  const messages = document.getElementById('messages');
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Compras Inteligente</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f6f6f6;
+    }
+    #messages {
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      background: white;
+      padding: 10px;
+      min-height: 200px;
+    }
+    #input {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+    }
+    .msg { margin: 8px 0; }
+    .user { text-align: right; }
+    .bot { text-align: left; color: green; }
+  </style>
+</head>
+<body>
+  <h2>Lista de Compras Inteligente 🛒</h2>
+  <div id="messages"></div>
+  <input type="text" id="input" placeholder="Ex: sou de MG e tenho 400 reais" />
 
-  input.addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter') {
-      const userMsg = input.value;
-      appendMessage('user', userMsg);
-      input.value = '';
+  <script>
+    const input = document.getElementById('input');
+    const messages = document.getElementById('messages');
 
-      // Chamada segura à API /api/chat (usa OpenAI com chave protegida)
-      const gptResponse = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput: userMsg })
-      });
+    input.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        const userMsg = input.value;
+        appendMessage('user', userMsg);
+        input.value = '';
 
-      const gptData = await gptResponse.json();
-      try {
-        const { cidade, estado, orcamento } = JSON.parse(gptData.result);
-
-        // Chamada à sua API do Render com os dados extraídos
-        const listaResponse = await fetch("https://lista-compras-vtxx.onrender.com/gerar-lista", {
+        const gptResponse = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cidade, estado, orcamento })
+          body: JSON.stringify({ userInput: userMsg })
         });
 
-        const lista = await listaResponse.json();
-        const produtos = lista.lista.map(p => `- ${p.produto}: R$${p.preco.toFixed(2)}`).join('<br>');
-        appendMessage('bot', `Aqui está sua lista de compras:<br>${produtos}<br><br>Total: R$${lista.total.toFixed(2)}`);
-      } catch (err) {
-        appendMessage('bot', `Desculpe, não entendi. Pode repetir com cidade, estado e orçamento?`);
-      }
-    }
-  });
+        const gptData = await gptResponse.json();
+        try {
+          const { cidade, estado, orcamento } = JSON.parse(gptData.result);
 
-  function appendMessage(sender, text) {
-    const msg = document.createElement('div');
-    msg.className = `msg ${sender}`;
-    msg.innerHTML = `<div class="${sender}">${text}</div>`;
-    messages.appendChild(msg);
-  }
-</script>
+          const listaResponse = await fetch("https://lista-compras-vtxx.onrender.com/gerar-lista", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cidade, estado, orcamento })
+          });
+
+          const lista = await listaResponse.json();
+          const produtos = lista.lista.map(p => `- ${p.produto}: R$${p.preco.toFixed(2)}`).join('<br>');
+          appendMessage('bot', `Aqui está sua lista de compras:<br>${produtos}<br><br>Total: R$${lista.total.toFixed(2)}`);
+        } catch (err) {
+          appendMessage('bot', `Desculpe, não entendi. Pode repetir com cidade, estado e orçamento?`);
+        }
+      }
+    });
+
+    function appendMessage(sender, text) {
+      const msg = document.createElement('div');
+      msg.className = `msg ${sender}`;
+      msg.innerHTML = `<div class="${sender}">${text}</div>`;
+      messages.appendChild(msg);
+    }
+  </script>
+</body>
+</html>
