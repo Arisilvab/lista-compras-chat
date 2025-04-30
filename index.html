@@ -1,63 +1,100 @@
-<script>
-  const input = document.getElementById('input');
-  const messages = document.getElementById('messages');
-
-  input.addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter') {
-      const userMsg = input.value;
-      appendMessage('user', userMsg);
-      input.value = '';
-
-      try {
-        const gptResponse = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userInput: userMsg })
-        });
-
-        const gptData = await gptResponse.json();
-
-        // Tenta transformar em JSON (GPT sempre retorna como texto)
-        const parsed = JSON.parse(gptData.result);
-        const { dados, ingredientes } = parsed;
-
-        // Mostra resumo da interpretação
-        appendMessage('bot', `
-          Entendi! Vamos alimentar <b>${dados.pessoas}</b> pessoa(s) com orçamento de <b>R$${dados.orcamento}</b>
-          em uma lista <b>${dados.frequencia}</b> para <b>${dados.cidade || '...'}/${dados.estado}</b>.<br>
-          Ingredientes sugeridos: ${ingredientes.join(', ')}<br><br>Consultando preços reais...
-        `);
-
-        // Envia para a API do Render
-        const listaResponse = await fetch("https://lista-compras-vtxx.onrender.com/gerar-lista", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            cidade: dados.cidade,
-            estado: dados.estado,
-            orcamento: dados.orcamento,
-            ingredientes: ingredientes
-          })
-        });
-
-        const lista = await listaResponse.json();
-
-        const produtos = lista.lista.map(p => `- ${p.produto}: R$${p.preco.toFixed(2)}`).join('<br>');
-        appendMessage('bot', `
-          🛒 Aqui está sua lista de compras personalizada:<br><br>
-          ${produtos}<br><br><b>Total:</b> R$${lista.total.toFixed(2)}
-        `);
-      } catch (err) {
-        console.error(err);
-        appendMessage('bot', `⚠️ Desculpe, não entendi. Pode repetir com cidade, estado, orçamento e para quantas pessoas é a lista?`);
-      }
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lista de Compras Inteligente</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f3f3f3;
+      padding: 40px;
+      max-width: 700px;
+      margin: auto;
     }
-  });
+    h2 { margin-bottom: 10px; }
+    #messages {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 15px;
+      min-height: 200px;
+      margin-bottom: 10px;
+    }
+    .msg { margin: 10px 0; }
+    .user { text-align: right; font-weight: bold; }
+    .bot { text-align: left; color: green; }
+    input {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border: 2px solid #007bff;
+    }
+  </style>
+</head>
+<body>
+  <h2>Lista de Compras Inteligente 🛒</h2>
+  <div id="messages"></div>
+  <input type="text" id="input" placeholder="Ex: sou de MG, temos 3 pessoas, 500 reais por mês" />
 
-  function appendMessage(sender, text) {
-    const msg = document.createElement('div');
-    msg.className = `msg ${sender}`;
-    msg.innerHTML = `<div class="${sender}">${text}</div>`;
-    messages.appendChild(msg);
-  }
-</script>
+  <script>
+    const input = document.getElementById('input');
+    const messages = document.getElementById('messages');
+
+    input.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        const userMsg = input.value;
+        appendMessage('user', userMsg);
+        input.value = '';
+
+        try {
+          const gptResponse = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userInput: userMsg })
+          });
+
+          const gptData = await gptResponse.json();
+          const parsed = JSON.parse(gptData.result);
+          const { dados, ingredientes } = parsed;
+
+          appendMessage('bot', `
+            Vamos alimentar <b>${dados.pessoas}</b> pessoa(s) com <b>R$${dados.orcamento}</b><br>
+            Frequência: <b>${dados.frequencia}</b> para <b>${dados.cidade || '...'}/${dados.estado}</b><br>
+            Ingredientes sugeridos: ${ingredientes.join(', ')}<br><br>
+            Consultando preços reais...
+          `);
+
+          const listaResponse = await fetch("https://lista-compras-vtxx.onrender.com/gerar-lista", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              cidade: dados.cidade,
+              estado: dados.estado,
+              orcamento: dados.orcamento,
+              ingredientes: ingredientes
+            })
+          });
+
+          const lista = await listaResponse.json();
+          const produtos = lista.lista.map(p => `- ${p.produto}: R$${p.preco.toFixed(2)}`).join('<br>');
+
+          appendMessage('bot', `
+            🛒 Sua lista de compras:<br><br>
+            ${produtos}<br><br><b>Total:</b> R$${lista.total.toFixed(2)}
+          `);
+        } catch (err) {
+          console.error(err);
+          appendMessage('bot', `⚠️ Não consegui entender. Repita com cidade, estado, orçamento e número de pessoas.`);
+        }
+      }
+    });
+
+    function appendMessage(sender, text) {
+      const msg = document.createElement('div');
+      msg.className = `msg ${sender}`;
+      msg.innerHTML = `<div class="${sender}">${text}</div>`;
+      messages.appendChild(msg);
+    }
+  </script>
+</body>
+</html>
