@@ -52,10 +52,15 @@ ${userInput}
       })
     });
 
-    const data = await response.json();
-    const reply = data.choices[0].message.content;
+const data = await response.json();
+console.log("Resposta bruta OpenAI:", data);
 
-    res.status(200).json({ result: reply });
+if (!data.choices || !data.choices[0]) {
+  return res.status(500).json({ error: "Erro na resposta da OpenAI", details: data });
+}
+
+const reply = data.choices[0].message.content;
+res.status(200).json({ result: reply });
   } catch (error) {
     res.status(500).json({ error: "Erro na chamada da OpenAI", details: error.message });
   }
