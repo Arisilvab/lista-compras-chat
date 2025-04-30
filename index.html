@@ -55,6 +55,7 @@
 
           const gptData = await gptResponse.json();
           const onlyJson = gptData.result.match(/\{[\s\S]*\}/)?.[0];
+          console.log("Resposta bruta do GPT:", gptData.result);
 const parsed = JSON.parse(onlyJson);
           const { dados, ingredientes } = parsed;
 
