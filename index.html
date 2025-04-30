@@ -54,7 +54,8 @@
           });
 
           const gptData = await gptResponse.json();
-          const parsed = JSON.parse(gptData.result);
+          const onlyJson = gptData.result.match(/\{[\s\S]*\}/)?.[0];
+const parsed = JSON.parse(onlyJson);
           const { dados, ingredientes } = parsed;
 
           appendMessage('bot', `
